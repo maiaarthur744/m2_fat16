@@ -20,7 +20,13 @@ def read_root_directory(img, boot_params, root_dir_sector, root_dir_size):
     for i in range(0, len(root_dir), 32):
         entry = root_dir[i:i+32]
 
-        filename = entry[:11].decode('ascii').strip()
+        # Verificar se a entrada é válida
+        if entry[0] == 0x00:
+            break  # Entradas subsequentes são todas não utilizadas
+        if entry[0] == 0xE5:
+            continue  # Entrada excluída, pular
+
+        filename = entry[:11].decode('ascii', errors='ignore').strip()
         if filename and entry[0] != 0x00 and entry[0] != 0xE5:
             print ("ACHOU")
             print(entry)

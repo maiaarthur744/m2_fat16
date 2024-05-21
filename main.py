@@ -7,7 +7,7 @@ from root_directory import (
     display_file_content,
     display_file_attributes
 )
-from file_operations import rename_file, create_file #remove_file
+from file_operations import rename_file, create_file, remove_file
 
 def main():
     
@@ -86,10 +86,10 @@ def main():
                 file_content = input().strip()
                 create_file(img, boot_params, new_filename, file_content)
 
-            #elif selection == '6':
-            #    filename = input("Digite o nome do arquivo que deseja remover: ").strip()
-            #    result = remove_file(img, boot_params,root_dir_sector, root_dir_size, filename)
-            #    print(result)
+            elif selection == '6':
+                filename = input("Digite o nome do arquivo que deseja remover: ").strip()
+                result = remove_file(img, boot_params,root_dir_sector, root_dir_size, filename)
+                print(result)
 
             elif selection == '7':
                 break

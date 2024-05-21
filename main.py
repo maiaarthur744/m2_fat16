@@ -1,94 +1,102 @@
 import os
-from root_entry import RootEntry
+from boot_sector import read_boot_sector, print_boot_params
+from root_directory import (
+    calc_root_dir_position,
+    read_root_directory,
+    list_files,
+    display_file_content,
+    display_file_attributes
+)
+from file_operations import rename_file, create_file, remove_file
 
-iso_directory = "./iso"
+def main():
+    
+    menu = {
+        '0': "# ------------------------------------ # ",
+        '1': "1. Listar conteúdo do disco",
+        '2': "2. Listar o conteúdo de um arquivo",
+        '3': "3. Exibir atributos de um arquivo",
+        '4': "4. Renomear um arquivo",
+        '5': "5. Inserir/criar um novo arquivo",
+        '6': "6. Apagar/remover um arquivo",
+        '7': "7. Sair",
+        '8': "# ------------------------------------ # "
+    }
+
+    img_path = 'disco1.img'
+    with open(img_path, 'rb+') as img:
+        boot_params = read_boot_sector(img)
+        root_dir_sector, root_dir_size = calc_root_dir_position(boot_params)
+        entries = read_root_directory(img, boot_params, root_dir_sector, root_dir_size)
+        print_boot_params(boot_params)
 
 
-def get_file(directory):
-    files = os.listdir(directory)
-    file = files[0]
-    file_path = os.path.join(directory, file)
-    # file_size = os.path.getsize(file_path)
-    return file_path
-
-
-def get_root_size(filePath, rootOffset):
-    with open(filePath, "rb") as f:
-        f.seek(rootOffset)
-        root_size = 0
         while True:
-            dir_entry = f.read(32)  # Read directory entry (32 bytes)
-            # Check if end of directory
-            if dir_entry == b'\x00' * 32 or dir_entry[0] == 0x00:
-                break  # End of directory reached
-            root_size += 32  # Increment root size by size of each directory entry
 
-        # print("Size of root directory:", root_size, "bytes")
-        return root_size
+            for key in sorted(menu.keys()):
+                print(menu[key])
+            selection = input("Escolha uma opção: ").strip()
+            #os.system('cls' if os.name == 'nt' else 'clear')
 
+            if selection == '1':
+                list_files(entries)
 
-file_path = get_file(iso_directory)
-if file_path:
-    with open(file_path, "rb") as f:
-        f.seek(0)
-        boot_block = f.read(512)  # read all of the boot block
+            elif selection == '2':
+                ##print("\nDigite o nome do arquivo que deseja listar o conteúdo:")
+                ##print("Escreva no formato 8.3 (sem ponto) mesmo se houver espaço em branco")
+                # print("Ex: TESTX   TXT")
+                #file = input("> ").strip().upper()
+                entry_found = False
+                for entry in entries:
+                        print("----------------------------------")
+                        display_file_content(img, boot_params, entry)
+                        entry_found = True
+                #if not entry_found:
+                    #print(f"Arquivo '{file}' não encontrado")
 
-        bytes_per_sector = int.from_bytes(boot_block[11:13], byteorder='little')
-        sectors_per_cluster = boot_block[13]
-        bytes_per_cluster = bytes_per_sector * sectors_per_cluster
-        # print("bytes_per_cluster: ", bytes_per_cluster)
+            elif selection == '3':
+                # print("\nDigite o nome do arquivo que deseja listar os atributos:")
+                # print("Escreva no formato 8.3 (sem ponto) mesmo se houver espaço em branco")
+                # print("Ex: TESTX   TXT")
+                # file = input("> ").strip().upper()
+                entry_found = False
+                for entry in entries:
+                    #if file == entry['filename']:
+                        display_file_attributes(entry)
+                        entry_found = True
+                #if not entry_found:
+                #    print(f"Arquivo '{file}' não encontrado")
 
-        num_fats = int.from_bytes(boot_block[16:17], byteorder='little')
-        # print("num_fats: ", num_fats)
+            elif selection == '4':
+                print("\nDigite o nome do arquivo que deseja renomear:")
+                print("Escreva no formato 8.3 (sem ponto) mesmo se houver espaço em branco")
+                print("Ex: TESTX   TXT")
+                old_filename = input("> ").strip().upper()
+                print("\nDigite o novo nome para o arquivo escolhido que tenha os seguintes requisitos:")
+                print("8 caracteres (nome) + 3 caracteres (extensão) sem ponto (.) Ex: testetxt")
+                new_filename = input().strip().upper()
+                result = rename_file(img, boot_params, old_filename, new_filename)
+                print(result)
+                entries = read_root_directory(img, boot_params, root_dir_sector, root_dir_size)
 
-        reserved_sectors = int.from_bytes(boot_block[14:16], byteorder='little')
-        # print("reserved_sectors: ", reserved_sectors)
+            elif selection == '5':
+                print("\nDigite o nome do arquivo que será criado:")
+                new_filename = input().strip().upper()
+                print("\nDigite o conteúdo do arquivo:")
+                file_content = input().strip()
+                create_file(img, boot_params, new_filename, file_content)
 
-        bytes_per_fat = int.from_bytes(boot_block[22:24], byteorder='little')
-        # print("bytes_per_fat: ", bytes_per_fat)
+            elif selection == '6':
+                filename = input("Digite o nome do arquivo que deseja remover: ").strip()
+                result = remove_file(img, boot_params, filename)
+                print(result)
 
-        root_offset = (reserved_sectors + (num_fats * bytes_per_fat)) * bytes_per_sector
-        # print("root_offset: ", root_offset)
+            elif selection == '7':
+                break
 
-        root_size = get_root_size(file_path, root_offset)
-        f.seek(root_offset)
-        root_directory = f.read(root_size)
-        # print("root_directory: ", root_directory)
+            else:
+                print("Digite uma opção entre 1 e 7")
 
-        entry_number = root_size // 32
-        files_in_root = []
+if __name__ == "__main__":
+    main()
 
-        for entry in range(entry_number):
-            f.seek(root_offset)
-            dir_entry = f.read(32)
-
-            filename = dir_entry[:8].decode('ascii').strip() # Extract filename (first 8 bytes) and decode from ASCII
-            extension = dir_entry[8:11].decode('ascii').strip()  # Extract extension (next 3 bytes) and decode from ASCII
-            full_filename = filename
-            if extension:
-                full_filename += '.' + extension
-
-            size = int.from_bytes(dir_entry[28:32], byteorder='little')
-
-            date_bytes = dir_entry[16:18]
-            date_value = int.from_bytes(date_bytes, byteorder='little')
-            day = date_value & 0x1F
-            month = (date_value >> 5) & 0x0F
-            year = ((date_value >> 9) & 0x7F) + 1980
-
-            attributes_byte = dir_entry[11]    # Assuming attributes byte is located at offset 11
-            file_type = RootEntry.decode_attributes(attributes_byte) # Decode attributes to get entry type
-            files_in_root.append(RootEntry(
-                size = size,  # OK
-                full_name = full_filename,  # OK
-                content = b"",  #
-                entry_type = file_type,  # OK
-                last_updated = f"{year}-{month:02d}-{day:02d}"  # OK
-            ))
-            root_offset += 32
-
-        for entry in files_in_root:
-            print("Full name:", entry.full_name)
-            print("Size:", entry.size)
-            print("File type: ", entry.entry_type)
-            print("Date of the last update:", entry.last_updated)

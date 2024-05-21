@@ -110,56 +110,53 @@ def create_file(f, boot_params, filename, content):
 
 # -------------------------------------------------------------------------------------------- #
 
-def remove_file(img, boot_params, filename):
-    root_dir_sector, root_dir_size = calc_root_dir_position(boot_params)
-    bytes_per_sector = boot_params['bytes_per_sector']
-    fat_sector = boot_params['reserved_sectors']
-    sectors_per_fat = boot_params['sectors_per_fat']
-    fat_size = sectors_per_fat * bytes_per_sector
+def remove_file(img, boot_params, root_dir_sector, root_dir_size, filename):
+    root_dir_offset = root_dir_sector * boot_params['bytes_per_sector']
+    img.seek(root_dir_offset)
+    root_dir = img.read(root_dir_size * boot_params['bytes_per_sector'])
+    
+    print("Offset do diretório raiz: ", root_dir_offset)
 
-    # Read the entire FAT table
-    img.seek(fat_sector * bytes_per_sector)
-    fat = img.read(fat_size)
-
-    # Find the directory entry for the file
-    img.seek(root_dir_sector * bytes_per_sector)
-    root_dir = img.read(root_dir_size)
     entry_index = -1
     starting_cluster = None
 
     for i in range(0, len(root_dir), 32):
         entry = root_dir[i:i+32]
-        if entry[0] == 0x00:
-            break
-        if entry[0] == 0xE5:
-            continue
-        try:
-            entry_filename = entry[:11].decode('ascii').strip()
-            entry_filename = entry_filename[:8].rstrip() + '.' + entry_filename[8:].rstrip()
-        except UnicodeDecodeError as e:
-            continue
 
-        if entry_filename.upper() == filename.upper():
+        entry_filename = entry[:11].decode('ascii', errors='ignore').strip()
+        if entry_filename.upper() == filename.upper() and entry[0] != 0x00 and entry[0] != 0xE5:
+            print("Arquivo encontrado:", entry_filename)
             entry_index = i
             starting_cluster = int.from_bytes(entry[26:28], byteorder='little')
             break
 
     if entry_index == -1:
-        return f"Erro: Arquivo '{filename}' não encontrado."
+        print(f"Erro: Arquivo '{filename}' não encontrado.")
+        return
 
-    # Mark the directory entry as deleted
-    img.seek(root_dir_sector * bytes_per_sector + entry_index)
+    # Marcar a entrada do diretório como excluída
+    img.seek(root_dir_offset + entry_index)
     img.write(b'\xE5' + entry[1:])
 
-    # Free the clusters in the FAT table
+    # Ler a FAT
+    fat_sector = boot_params['reserved_sectors']
+    sectors_per_fat = boot_params['sectors_per_fat']
+    fat_size = sectors_per_fat * boot_params['bytes_per_sector']
+
+    img.seek(fat_sector * boot_params['bytes_per_sector'])
+    fat = bytearray(img.read(fat_size))
+
+    # Liberar os clusters na FAT
     cluster = starting_cluster
     while cluster < 0xFFF8:
         next_cluster = int.from_bytes(fat[cluster * 2:cluster * 2 + 2], byteorder='little')
         fat[cluster * 2:cluster * 2 + 2] = b'\x00\x00'
+        if next_cluster >= 0xFFF8:
+            break
         cluster = next_cluster
 
-    # Write the updated FAT back to the image
-    img.seek(fat_sector * bytes_per_sector)
+    # Escrever a FAT atualizada de volta na imagem
+    img.seek(fat_sector * boot_params['bytes_per_sector'])
     img.write(fat)
 
-    return f"Arquivo '{filename}' removido com sucesso."
+    print(f"Arquivo '{filename}' removido com sucesso.")

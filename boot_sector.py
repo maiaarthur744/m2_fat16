@@ -10,7 +10,7 @@ def read_boot_sector(img):
     sectors_per_cluster = struct.unpack('<B', boot_sector[13:14])[0] # Números de blocos por partição
     reserved_sectors = struct.unpack('<H', boot_sector[14:16])[0]    # Quantidade de blocos que o boot possui (1)
     num_fats = struct.unpack('<B', boot_sector[16:17])[0]            # Número de tabelas FAT
-    max_root_dir_entries = struct.unpack('<H', boot_sector[17:19])[0]# Número de diretórios root
+    max_root_dir_entries = struct.unpack('<H', boot_sector[17:19])[0]# Número de entries dentro dos diretórios root
     sectors_per_fat = struct.unpack('<H', boot_sector[22:24])[0]     # Número de blocos por FAT = Tamanho da FAT
 
     return {

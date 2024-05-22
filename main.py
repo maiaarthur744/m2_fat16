@@ -10,7 +10,7 @@ from root_directory import (
 from file_operations import rename_file, create_file, remove_file
 
 def main():
-    
+
     menu = {
         '0': "# ------------------------------------ # ",
         '1': "1. Listar conteúdo do disco",
@@ -42,30 +42,13 @@ def main():
                 list_files(entries)
 
             elif selection == '2':
-                ##print("\nDigite o nome do arquivo que deseja listar o conteúdo:")
-                ##print("Escreva no formato 8.3 (sem ponto) mesmo se houver espaço em branco")
-                # print("Ex: TESTX   TXT")
-                #file = input("> ").strip().upper()
-                entry_found = False
                 for entry in entries:
                         print("----------------------------------")
                         display_file_content(img, boot_params, entry)
-                        entry_found = True
-                #if not entry_found:
-                    #print(f"Arquivo '{file}' não encontrado")
 
             elif selection == '3':
-                # print("\nDigite o nome do arquivo que deseja listar os atributos:")
-                # print("Escreva no formato 8.3 (sem ponto) mesmo se houver espaço em branco")
-                # print("Ex: TESTX   TXT")
-                # file = input("> ").strip().upper()
-                entry_found = False
                 for entry in entries:
-                    #if file == entry['filename']:
                         display_file_attributes(entry)
-                        entry_found = True
-                #if not entry_found:
-                #    print(f"Arquivo '{file}' não encontrado")
 
             elif selection == '4':
                 print("\nDigite o nome do arquivo que deseja renomear:")
@@ -88,8 +71,7 @@ def main():
 
             elif selection == '6':
                 filename = input("Digite o nome do arquivo que deseja remover: ").strip()
-                result = remove_file(img, boot_params,root_dir_sector, root_dir_size, filename)
-                print(result)
+                result = remove_file(img, boot_params,root_dir_sector, root_dir_size, filename, entries)
 
             elif selection == '7':
                 break

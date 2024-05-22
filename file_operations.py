@@ -110,7 +110,7 @@ def create_file(f, boot_params, filename, content):
 
 # -------------------------------------------------------------------------------------------- #
 
-def remove_file(img, boot_params, root_dir_sector, root_dir_size, filename):
+def remove_file(img, boot_params, root_dir_sector, root_dir_size, filename, entries):
     root_dir_offset = root_dir_sector * boot_params['bytes_per_sector']
     img.seek(root_dir_offset)
     root_dir = img.read(root_dir_size * boot_params['bytes_per_sector'])
@@ -159,4 +159,16 @@ def remove_file(img, boot_params, root_dir_sector, root_dir_size, filename):
     img.seek(fat_sector * boot_params['bytes_per_sector'])
     img.write(fat)
 
+
+    # Encontrar e remover a entrada correspondente
+    entry_to_remove = None
+    for entry in entries:
+        if entry['filename'] == filename:
+            entry_to_remove = entry
+            break
+
+    if entry_to_remove:
+        entries.remove(entry_to_remove) 
+
     print(f"Arquivo '{filename}' removido com sucesso.")
+

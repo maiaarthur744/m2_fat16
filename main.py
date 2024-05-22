@@ -7,7 +7,7 @@ from root_directory import (
     display_file_content,
     display_file_attributes
 )
-from file_operations import rename_file, create_file, remove_file
+from file_operations import rename_file, insert_file_into_image, remove_file
 
 def main():
 
@@ -36,7 +36,7 @@ def main():
             for key in sorted(menu.keys()):
                 print(menu[key])
             selection = input("Escolha uma opção: ").strip()
-            #os.system('cls' if os.name == 'nt' else 'clear')
+            os.system('cls' if os.name == 'nt' else 'clear')
 
             if selection == '1':
                 list_files(entries)
@@ -63,11 +63,12 @@ def main():
                 entries = read_root_directory(img, boot_params, root_dir_sector, root_dir_size)
 
             elif selection == '5':
-                print("\nDigite o nome do arquivo que será criado:")
-                new_filename = input().strip().upper()
-                print("\nDigite o conteúdo do arquivo:")
-                file_content = input().strip()
-                create_file(img, boot_params, new_filename, file_content)
+                #print("\nDigite o nome do arquivo que será criado:")
+                #new_filename = input().strip().upper()
+                #print("\nDigite o conteúdo do arquivo:")
+                #file_content = input().strip()
+                insert_file_into_image(entries, img, boot_params, root_dir_sector, root_dir_size, 'arquivo.txt', 'ARQUIVO TXT')
+                #create_file(img, boot_params, new_filename, file_content)
 
             elif selection == '6':
                 filename = input("Digite o nome do arquivo que deseja remover: ").strip()

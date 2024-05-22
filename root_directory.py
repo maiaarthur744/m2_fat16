@@ -28,8 +28,8 @@ def read_root_directory(img, boot_params, root_dir_sector, root_dir_size):
 
         filename = entry[:11].decode('ascii', errors='ignore').strip()
         if filename and entry[0] != 0x00 and entry[0] != 0xE5:
-            print ("ACHOU")
-            print(entry)
+            #print ("ACHOU")
+            #print(entry)
             attributes = entry[11]
             is_read_only = bool(attributes & 0x01)
             is_hidden = bool(attributes & 0x02)
@@ -66,6 +66,19 @@ def decode_date_time(date, time):
     hour = (time >> 11) & 0x1F
     minute = (time >> 5) & 0x3F
     second = (time & 0x1F) * 2
+
+    # Verificar se os valores estão dentro dos intervalos válidos
+    if not (1 <= month <= 12):
+        month = 1  # Definir mês padrão válido
+    if not (1 <= day <= 31):
+        day = 1  # Definir dia padrão válido
+    if not (0 <= hour < 24):
+        hour = 0  # Definir hora padrão válida
+    if not (0 <= minute < 60):
+        minute = 0  # Definir minuto padrão válido
+    if not (0 <= second < 60):
+        second = 0  # Definir segundo padrão válido
+
     return datetime.datetime(year, month, day, hour, minute, second)
 
 # -------------------------------------------------------------------------------------------- #
@@ -81,7 +94,7 @@ def list_files(entries):
 def display_file_content(img, boot_params, entry):
     cluster = entry['starting_cluster']
     content = read_file_content(img, boot_params, cluster, entry['file_size'])
-    print(f"Content of {entry['filename']}:\n{content}")
+    print(f"Content of {entry['filename']}:\n{content}\n")
 
 # -------------------------------------------------------------------------------------------- #
 
@@ -112,12 +125,11 @@ def get_next_cluster(img, boot_params, cluster):
 # -------------------------------------------------------------------------------------------- #
 
 def display_file_attributes(entry):
-    print('\n' '-------------------------------------------------' '\n')
     print(f"Attributes of {entry['filename']}:")
     print(f"  Read-only: {'Yes' if entry['attributes']['is_read_only'] else 'No'}")
     print(f"  Hidden: {'Yes' if entry['attributes']['is_hidden'] else 'No'}")
     print(f"  System: {'Yes' if entry['attributes']['is_system'] else 'No'}")
     print(f"  Creation time: {entry['creation_time']}")
-    print(f"  Last modification time: {entry['last_mod_time']}")
+    print(f"  Last modification time: {entry['last_mod_time']}\n")
 
 # -------------------------------------------------------------------------------------------- #

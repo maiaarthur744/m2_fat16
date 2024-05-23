@@ -29,7 +29,23 @@ def rename_file(img, boot_params, old_filename, new_filename):
 
 # -------------------------------------------------------------------------------------------- #
 
+def encode_time_fat16(dt):
+    year = dt.year - 1980
+    month = dt.month
+    day = dt.day
+    hour = dt.hour
+    minute = dt.minute
+    second = dt.second // 2  # FAT16 stores seconds divided by 2
+
+    time = (hour << 11) | (minute << 5) | second
+    date = (year << 9) | (month << 5) | day
+
+    return date, time
+
+
 def insert_file_into_image(entries, img, boot_params, root_dir_sector, root_dir_size, filename_on_host, new_filename):
+    import datetime
+    
     # Lê o conteúdo do arquivo .txt do computador
     with open(filename_on_host, 'rb') as file:
         file_content = file.read()
@@ -49,7 +65,7 @@ def insert_file_into_image(entries, img, boot_params, root_dir_sector, root_dir_
         if entry == 0x0000:  # Cluster livre
             free_clusters.append(i)
             if len(free_clusters) == clusters_needed:
-                break
+                break 
 
     if len(free_clusters) < clusters_needed:
         raise ValueError("Não há clusters livres suficientes na imagem do disco para armazenar o arquivo.")
@@ -87,17 +103,23 @@ def insert_file_into_image(entries, img, boot_params, root_dir_sector, root_dir_
     if entry_offset is None:
         raise ValueError("Não há entradas livres no diretório raiz para o novo arquivo.")
     
+    # Definir a data e a hora como "2024-02-26 12:19:34"
+    now = datetime.datetime.now()
+    specific_time = datetime.datetime(now.year, now.month, now.day, now.hour, now.minute, now.second)
+    creation_date, creation_time = encode_time_fat16(specific_time)
+    last_mod_date, last_mod_time = encode_time_fat16(specific_time)
     
     # Cria a nova entrada no diretório raiz
     entry = bytearray(32)
     new_filename = new_filename.ljust(11)[:11].upper().encode('ascii')
     entry[0:11] = new_filename
     entry[11] = 0x20  # Atributos do arquivo (arquivo normal)
-    ##entry[22:24] = (0).to_bytes(2, byteorder='little')  # Hora de modificação (pode ser ajustada conforme necessário)
-    ##entry[24:26] = (0).to_bytes(2, byteorder='little')  # Data de modificação (pode ser ajustada conforme necessário)
-    entry[26:28] = (free_clusters[0]).to_bytes(2, byteorder='little')  # Primeiro cluster
-    entry[28:32] = (file_size).to_bytes(4, byteorder='little')  # Tamanho do arquivo
-    
+    entry[14:16] = creation_time.to_bytes(2, byteorder='little')
+    entry[16:18] = creation_date.to_bytes(2, byteorder='little')
+    entry[22:24] = last_mod_time.to_bytes(2, byteorder='little')
+    entry[24:26] = last_mod_date.to_bytes(2, byteorder='little')
+    entry[26:28] = free_clusters[0].to_bytes(2, byteorder='little')  # Primeiro cluster
+    entry[28:32] = len(file_content).to_bytes(4, byteorder='little')  # Tamanho do arquivo
 
     entries.append({
         'filename': new_filename.decode('ascii').strip(),
@@ -106,17 +128,18 @@ def insert_file_into_image(entries, img, boot_params, root_dir_sector, root_dir_
             'is_hidden': False,
             'is_system': False
         },
-        'creation_time': "2024-02-26 12:19:34",
-        'last_mod_time': "2024-02-26 12:19:34",
+        'creation_time': specific_time,
+        'last_mod_time': specific_time,
         'file_size': file_size,
-        'starting_cluster': free_clusters
+        'starting_cluster': free_clusters[0]
     })    
-
 
     # Escreve a nova entrada no diretório raiz
     img.seek(entry_offset)
     img.write(entry)
     print(f"Arquivo '{filename_on_host}' inserido como '{new_filename.decode('ascii').strip()}' na imagem do disco.")
+
+
 
 # -------------------------------------------------------------------------------------------- #
 

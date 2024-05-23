@@ -87,16 +87,18 @@ def insert_file_into_image(entries, img, boot_params, root_dir_sector, root_dir_
     if entry_offset is None:
         raise ValueError("Não há entradas livres no diretório raiz para o novo arquivo.")
     
+    
     # Cria a nova entrada no diretório raiz
     entry = bytearray(32)
     new_filename = new_filename.ljust(11)[:11].upper().encode('ascii')
     entry[0:11] = new_filename
     entry[11] = 0x20  # Atributos do arquivo (arquivo normal)
-    entry[22:24] = (0).to_bytes(2, byteorder='little')  # Hora de modificação (pode ser ajustada conforme necessário)
-    entry[24:26] = (0).to_bytes(2, byteorder='little')  # Data de modificação (pode ser ajustada conforme necessário)
+    ##entry[22:24] = (0).to_bytes(2, byteorder='little')  # Hora de modificação (pode ser ajustada conforme necessário)
+    ##entry[24:26] = (0).to_bytes(2, byteorder='little')  # Data de modificação (pode ser ajustada conforme necessário)
     entry[26:28] = (free_clusters[0]).to_bytes(2, byteorder='little')  # Primeiro cluster
     entry[28:32] = (file_size).to_bytes(4, byteorder='little')  # Tamanho do arquivo
     
+
     entries.append({
         'filename': new_filename.decode('ascii').strip(),
         'attributes': {
@@ -104,8 +106,8 @@ def insert_file_into_image(entries, img, boot_params, root_dir_sector, root_dir_
             'is_hidden': False,
             'is_system': False
         },
-        'creation_time': decode_date_time(0x4A21, 0x7D00),
-        'last_mod_time': decode_date_time(0x4A21, 0x7D00),
+        'creation_time': "2024-02-26 12:19:34",
+        'last_mod_time': "2024-02-26 12:19:34",
         'file_size': file_size,
         'starting_cluster': free_clusters
     })    

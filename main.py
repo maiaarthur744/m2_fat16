@@ -36,7 +36,7 @@ def main():
             for key in sorted(menu.keys()):
                 print(menu[key])
             selection = input("Escolha uma opção: ").strip()
-            os.system('cls' if os.name == 'nt' else 'clear')
+            #os.system('cls' if os.name == 'nt' else 'clear')
 
             if selection == '1':
                 list_files(entries)
@@ -68,6 +68,7 @@ def main():
                 #print("\nDigite o conteúdo do arquivo:")
                 #file_content = input().strip()
                 insert_file_into_image(entries, img, boot_params, root_dir_sector, root_dir_size, 'arquivo.txt', 'ARQUIVO TXT')
+                entries = read_root_directory(img, boot_params, root_dir_sector, root_dir_size)
                 #create_file(img, boot_params, new_filename, file_content)
 
             elif selection == '6':

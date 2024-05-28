@@ -2,17 +2,17 @@ import struct
 import datetime
 
 def calc_root_dir_position(boot_params):
-    first_root_dir_sector = boot_params['reserved_sectors'] + (boot_params['num_fats'] * boot_params['sectors_per_fat'])
-    root_dir_size = (boot_params['max_root_dir_entries'] * 32) // boot_params['bytes_per_sector']
+    first_root_dir_sector = boot_params['reserved_blocks'] + (boot_params['num_fats'] * boot_params['blocks_per_fat'])
+    root_dir_size = (boot_params['max_root_dir_entries'] * 32) // boot_params['bytes_per_block']
     
     return first_root_dir_sector, root_dir_size
 
 # -------------------------------------------------------------------------------------------- #
 
 def read_root_directory(img, boot_params, root_dir_sector, root_dir_size):
-    root_dir_offset = root_dir_sector * boot_params['bytes_per_sector']
+    root_dir_offset = root_dir_sector * boot_params['bytes_per_block']
     img.seek(root_dir_offset)
-    root_dir = img.read(root_dir_size * boot_params['bytes_per_sector'])
+    root_dir = img.read(root_dir_size * boot_params['bytes_per_block'])
     
     print("Offset do diretório raiz: ", root_dir_offset)
 
@@ -28,8 +28,6 @@ def read_root_directory(img, boot_params, root_dir_sector, root_dir_size):
 
         filename = entry[:11].decode('ascii', errors='ignore').strip()
         if filename and entry[0] != 0x00 and entry[0] != 0xE5:
-            #print ("ACHOU")
-            #print(entry)
             attributes = entry[11]
             is_read_only = bool(attributes & 0x01)
             is_hidden = bool(attributes & 0x02)
@@ -99,16 +97,16 @@ def display_file_content(img, boot_params, entry):
 # -------------------------------------------------------------------------------------------- #
 
 def read_file_content(img, boot_params, cluster, size):
-    sectors_per_cluster = boot_params['sectors_per_cluster']
-    bytes_per_sector = boot_params['bytes_per_sector']
+    blocks_per_cluster = boot_params['blocks_per_cluster']
+    bytes_per_block = boot_params['bytes_per_block']
     root_dir_sector, _ = calc_root_dir_position(boot_params)
-    data_region_start = root_dir_sector + (boot_params['max_root_dir_entries'] * 32) // bytes_per_sector
+    data_region_start = root_dir_sector + (boot_params['max_root_dir_entries'] * 32) // bytes_per_block
 
     content = bytearray()
     while size > 0:
-        sector = data_region_start + (cluster - 2) * sectors_per_cluster
-        img.seek(sector * bytes_per_sector)
-        cluster_data = img.read(min(size, sectors_per_cluster * bytes_per_sector))
+        sector = data_region_start + (cluster - 2) * blocks_per_cluster
+        img.seek(sector * bytes_per_block)
+        cluster_data = img.read(min(size, blocks_per_cluster * bytes_per_block))
         content.extend(cluster_data)
         size -= len(cluster_data)
         cluster = get_next_cluster(img, boot_params, cluster)
@@ -118,7 +116,7 @@ def read_file_content(img, boot_params, cluster, size):
 # -------------------------------------------------------------------------------------------- #
 
 def get_next_cluster(img, boot_params, cluster):
-    fat_offset = boot_params['reserved_sectors'] * boot_params['bytes_per_sector'] + cluster * 2
+    fat_offset = boot_params['reserved_blocks'] * boot_params['bytes_per_block'] + cluster * 2
     img.seek(fat_offset)
     return struct.unpack('<H', img.read(2))[0]
 

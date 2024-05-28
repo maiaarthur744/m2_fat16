@@ -36,7 +36,7 @@ def main():
             for key in sorted(menu.keys()):
                 print(menu[key])
             selection = input("Escolha uma opção: ").strip()
-            #os.system('cls' if os.name == 'nt' else 'clear')
+            os.system('cls' if os.name == 'nt' else 'clear')
 
             if selection == '1':
                 list_files(entries)

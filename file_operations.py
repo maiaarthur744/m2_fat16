@@ -10,16 +10,14 @@ def rename_file(img, boot_params, old_filename, new_filename):
     new_filename = new_filename.upper().ljust(11)
 
     root_dir_sector, root_dir_size = calc_root_dir_position(boot_params)
-    root_dir_offset = root_dir_sector * boot_params['bytes_per_sector']
+    root_dir_offset = root_dir_sector * boot_params['bytes_per_block']
     img.seek(root_dir_offset)
-    root_dir = img.read(root_dir_size * boot_params['bytes_per_sector'])
+    root_dir = img.read(root_dir_size * boot_params['bytes_per_block'])
 
-    # Find the file entry
     for i in range(0, len(root_dir), 32):
         entry = root_dir[i:i+32]
         filename = entry[:11].decode('ascii').strip()
         if filename == old_filename.strip():
-            # Update the filename
             img.seek(root_dir_offset + i)
             img.write(new_filename.encode('ascii'))
             return f"File '{old_filename.strip()}' renamed to '{new_filename.strip()}'"
@@ -46,7 +44,6 @@ def encode_time_fat16(dt):
 def insert_file_into_image(entries, img, boot_params, root_dir_sector, root_dir_size, filename_on_host, new_filename):
     import datetime
     
-    # Lê o conteúdo do arquivo .txt do computador
     with open(filename_on_host, 'rb') as file:
         file_content = file.read()
 
@@ -54,9 +51,9 @@ def insert_file_into_image(entries, img, boot_params, root_dir_sector, root_dir_
     clusters_needed = (file_size + boot_params['bytes_per_cluster'] - 1) // boot_params['bytes_per_cluster']
     
     # Procura por clusters livres na FAT
-    fat_start_sector = boot_params['reserved_sectors']
-    fat_size = boot_params['sectors_per_fat'] * boot_params['bytes_per_sector']
-    img.seek(fat_start_sector * boot_params['bytes_per_sector'])
+    fat_start_sector = boot_params['reserved_blocks']
+    fat_size = boot_params['blocks_per_fat'] * boot_params['bytes_per_block']
+    img.seek(fat_start_sector * boot_params['bytes_per_block'])
     fat = bytearray(img.read(fat_size))
     
     free_clusters = []
@@ -76,7 +73,7 @@ def insert_file_into_image(entries, img, boot_params, root_dir_sector, root_dir_
     fat[free_clusters[-1]*2:free_clusters[-1]*2+2] = (0xFFFF).to_bytes(2, byteorder='little')  # End of file marker
 
     # Escreve o conteúdo do arquivo nos clusters da imagem do disco
-    data_region_start = (root_dir_sector + root_dir_size) * boot_params['bytes_per_sector']
+    data_region_start = (root_dir_sector + root_dir_size) * boot_params['bytes_per_block']
     for i, cluster in enumerate(free_clusters):
         sector = data_region_start + (cluster - 2) * boot_params['bytes_per_cluster']
         img.seek(sector)
@@ -85,13 +82,13 @@ def insert_file_into_image(entries, img, boot_params, root_dir_sector, root_dir_
         img.write(file_content[start:end])
     
     # Atualiza a FAT na imagem do disco
-    img.seek(fat_start_sector * boot_params['bytes_per_sector'])
+    img.seek(fat_start_sector * boot_params['bytes_per_block'])
     img.write(fat)
     
     # Encontra uma entrada livre no diretório raiz
-    root_dir_offset = root_dir_sector * boot_params['bytes_per_sector']
+    root_dir_offset = root_dir_sector * boot_params['bytes_per_block']
     img.seek(root_dir_offset)
-    root_dir = img.read(root_dir_size * boot_params['bytes_per_sector'])
+    root_dir = img.read(root_dir_size * boot_params['bytes_per_block'])
     
     entry_offset = None
     for i in range(0, len(root_dir), 32):
@@ -144,9 +141,9 @@ def insert_file_into_image(entries, img, boot_params, root_dir_sector, root_dir_
 # -------------------------------------------------------------------------------------------- #
 
 def remove_file(img, boot_params, root_dir_sector, root_dir_size, filename, entries):
-    root_dir_offset = root_dir_sector * boot_params['bytes_per_sector']
+    root_dir_offset = root_dir_sector * boot_params['bytes_per_block']
     img.seek(root_dir_offset)
-    root_dir = img.read(root_dir_size * boot_params['bytes_per_sector'])
+    root_dir = img.read(root_dir_size * boot_params['bytes_per_block'])
     
     print("Offset do diretório raiz: ", root_dir_offset)
 
@@ -172,11 +169,11 @@ def remove_file(img, boot_params, root_dir_sector, root_dir_size, filename, entr
     img.write(b'\xE5' + entry[1:])
 
     # Ler a FAT
-    fat_sector = boot_params['reserved_sectors']
-    sectors_per_fat = boot_params['sectors_per_fat']
-    fat_size = sectors_per_fat * boot_params['bytes_per_sector']
+    fat_sector = boot_params['reserved_blocks']
+    blocks_per_fat = boot_params['blocks_per_fat']
+    fat_size = blocks_per_fat * boot_params['bytes_per_block']
 
-    img.seek(fat_sector * boot_params['bytes_per_sector'])
+    img.seek(fat_sector * boot_params['bytes_per_block'])
     fat = bytearray(img.read(fat_size))
 
     # Liberar os clusters na FAT
@@ -189,7 +186,7 @@ def remove_file(img, boot_params, root_dir_sector, root_dir_size, filename, entr
         cluster = next_cluster
 
     # Escrever a FAT atualizada de volta na imagem
-    img.seek(fat_sector * boot_params['bytes_per_sector'])
+    img.seek(fat_sector * boot_params['bytes_per_block'])
     img.write(fat)
 
 
